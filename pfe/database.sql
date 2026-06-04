@@ -1,0 +1,90 @@
+CREATE DATABASE IF NOT EXISTS mailflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE mailflow;
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(190) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    phone VARCHAR(50) DEFAULT NULL,
+    company VARCHAR(150) DEFAULT NULL,
+    website VARCHAR(255) DEFAULT NULL,
+    bio TEXT DEFAULT NULL,
+    plan VARCHAR(50) NOT NULL DEFAULT 'Free',
+    avatar_path VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS avatar_path VARCHAR(255) DEFAULT NULL AFTER plan;
+
+CREATE TABLE IF NOT EXISTS personal_information (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(190) NOT NULL,
+    phone VARCHAR(50) DEFAULT NULL,
+    company VARCHAR(150) DEFAULT NULL,
+    website VARCHAR(255) DEFAULT NULL,
+    bio TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_personal_information_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT uq_personal_information_user UNIQUE (user_id),
+    CONSTRAINT uq_personal_information_email UNIQUE (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO personal_information (user_id, first_name, last_name, email, phone, company, website, bio)
+SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.company, u.website, u.bio
+FROM users u
+LEFT JOIN personal_information pi ON pi.user_id = u.id
+WHERE pi.user_id IS NULL;
+
+CREATE TABLE IF NOT EXISTS contacts (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    email VARCHAR(190) NOT NULL,
+    company VARCHAR(150) DEFAULT NULL,
+    fax VARCHAR(100) DEFAULT NULL,
+    tags TEXT DEFAULT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_contacts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT uq_contacts_user_email UNIQUE (user_id, email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS campaigns (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    name VARCHAR(190) NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    sender_name VARCHAR(150) DEFAULT NULL,
+    sender_email VARCHAR(190) DEFAULT NULL,
+    content MEDIUMTEXT DEFAULT NULL,
+    recipients_raw MEDIUMTEXT DEFAULT NULL,
+    audience_tags TEXT DEFAULT NULL,
+    audience_notes TEXT DEFAULT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'draft',
+    recipients_count INT UNSIGNED NOT NULL DEFAULT 0,
+    opens_count INT UNSIGNED NOT NULL DEFAULT 0,
+    clicks_count INT UNSIGNED NOT NULL DEFAULT 0,
+    schedule_at DATETIME DEFAULT NULL,
+    sent_at DATETIME DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_campaigns_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS billing_history (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    title VARCHAR(190) NOT NULL,
+    amount_label VARCHAR(50) NOT NULL DEFAULT '$0.00',
+    icon VARCHAR(20) NOT NULL DEFAULT '💳',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_billing_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
